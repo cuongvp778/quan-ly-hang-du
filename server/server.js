@@ -16,53 +16,9 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl || 'https://example.supabase.co', supabaseKey || 'KEY');
 
-// ======= BOOTSTRAP EXCEL DATA ========
-let masterData = [];
-async function loadMasterData() {
-  try {
-    const xlDataPath = path.join(__dirname, '../Data1.xlsx');
-    const workbook = new exceljs.Workbook();
-    await workbook.xlsx.readFile(xlDataPath);
-    const worksheet = workbook.worksheets[0];
-    const newData = []; // Dùng mảng tạm để tránh làm gián đoạn search khi đang nạp
-    worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber > 1) {
-        const vals = row.values;
-        if (vals[4]) {
-          newData.push({
-            rpro: String(vals[4]).trim(),
-            pu: vals[7] ? String(vals[7]).trim() : '',
-            vai: vals[8] ? String(vals[8]).trim() : '',
-            bom: vals[26] ? String(vals[26]).trim() : '',
-            so_luong_don: vals[10] ? Number(vals[10]) : 0
-          });
-        }
-      }
-    });
-    masterData = newData; // Cập nhật mảng master
-    console.log(`[INFO] [${new Date().toLocaleTimeString()}] Đã nạp thành công ${masterData.length} mã RPRO từ Data1.xlsx!`);
-  } catch (err) {
-    console.log(`[WARNING] Không nạp được Data1.xlsx: ${err.message}`);
-  }
-}
-
-// Khởi động nạp lần đầu
-loadMasterData();
-
-// Tự động nạp lại khi file thay đổi (có khử rung - debounce)
-if (process.env.NODE_ENV !== 'production') {
-  const xlDataPath = path.join(__dirname, '../Data1.xlsx');
-  let watchTimeout;
-  fs.watch(xlDataPath, (eventType) => {
-    if (eventType === 'change') {
-      clearTimeout(watchTimeout);
-      watchTimeout = setTimeout(() => {
-        console.log('[WATCHER] Phát hiện file Data1.xlsx thay đổi, đang nạp lại...');
-        loadMasterData();
-      }, 500); // Đợi 500ms sau khi file lưu xong hẳn
-    }
-  });
-}
+// =======================================
+// Dữ liệu bây giờ được query trực tiếp từ Supabase bảng master_data
+// để đảm bảo tính ổn định và không làm nặng server.
 // =======================================
 
 // Tạo router riêng cho /api để đồng bộ với Vercel
@@ -149,43 +105,41 @@ apiRouter.get('/lps/search', async (req, res) => {
     const { rpro } = req.query;
     if (!rpro) return res.json([]);
     
-    // Ưu tiên tìm trong Excel gốc trước (Trim khoảng trắng đầu cuối)
-    const searchString = rpro.trim().toLowerCase();
-    let hits = masterData.filter(m => m.rpro && m.rpro.toLowerCase().includes(searchString)).slice(0, 5);
+    const searchString = rpro.trim();
 
-    // Nếu không có trong Excel, Fallback gọi xuống Database
-    if (hits.length === 0) {
-      const { data, error } = await supabase
+    // 1. Tìm trong bảng master_data (Dữ liệu danh mục gốc)
+    const { data: masterHits, error: masterError } = await supabase
+      .from('master_data')
+      .select('rpro, vai, pu, bom, so_luong_don')
+      .ilike('rpro', `%${searchString}%`)
+      .limit(5);
+
+    if (masterError) throw masterError;
+
+    // 2. Nếu không có trong danh mục gốc, tìm trong lịch sử nhập (Dữ liệu đã nhập rồi) làm fallback
+    if (!masterHits || masterHits.length === 0) {
+      const { data: historyHits, error: historyError } = await supabase
         .from('lps_inventory')
         .select('rpro, vai, pu, bom, so_luong_don')
-        .ilike('rpro', `%${rpro}%`)
+        .ilike('rpro', `%${searchString}%`)
         .order('created_at', { ascending: false })
         .limit(5);
 
-      if (!error && data) {
-        // Filter duplicate
-        const rproSet = new Set();
-        for (const item of data) {
-          if (!rproSet.has(item.rpro)) {
-            rproSet.add(item.rpro);
-            hits.push(item);
-          }
+      if (historyError) throw historyError;
+      
+      // Filter duplicate RPROs from history
+      const unique = [];
+      const rproSet = new Set();
+      for (const item of (historyHits || [])) {
+        if (!rproSet.has(item.rpro)) {
+          rproSet.add(item.rpro);
+          unique.push(item);
         }
       }
-    } else {
-       // Filter duplicated RPROs if they exist in Excel as well
-       const unique = [];
-       const rproSet = new Set();
-       for (const item of hits) {
-         if (!rproSet.has(item.rpro)) {
-           rproSet.add(item.rpro);
-           unique.push(item);
-         }
-       }
-       hits = unique;
+      return res.json(unique);
     }
 
-    res.json(hits);
+    res.json(masterHits);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
