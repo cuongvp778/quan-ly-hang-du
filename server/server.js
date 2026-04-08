@@ -14,10 +14,14 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl || 'https://example.supabase.co', supabaseKey || 'KEY');
 
+// Tạo router riêng cho /api để đồng bộ với Vercel
+const apiRouter = express.Router();
+app.use('/api', apiRouter);
+
 // ======== API Routes ========
 
 // 1. Thêm dữ liệu (POST /lps)
-app.post('/lps', async (req, res) => {
+apiRouter.post('/lps', async (req, res) => {
   try {
     const { rpro, vai, pu, bom, so_luong_don, sizes, ghi_chu } = req.body;
     
@@ -57,7 +61,7 @@ app.post('/lps', async (req, res) => {
 });
 
 // 2. Lấy danh sách (GET /lps)
-app.get('/lps', async (req, res) => {
+apiRouter.get('/lps', async (req, res) => {
   try {
     const { rpro, date } = req.query;
     
@@ -89,7 +93,7 @@ app.get('/lps', async (req, res) => {
 });
 
 // 3. Tìm theo RPRO để auto-fill (GET /lps/search)
-app.get('/lps/search', async (req, res) => {
+apiRouter.get('/lps/search', async (req, res) => {
   try {
     const { rpro } = req.query;
     // Get distinct values or just the most recent entry with this RPRO
@@ -120,7 +124,7 @@ app.get('/lps/search', async (req, res) => {
 });
 
 // 4. Xuất excel (GET /lps/export)
-app.get('/lps/export', async (req, res) => {
+apiRouter.get('/lps/export', async (req, res) => {
   try {
     const { rpro, date } = req.query;
 
@@ -175,7 +179,7 @@ app.get('/lps/export', async (req, res) => {
 });
 
 // Standard route for Vercel functions (optional, usually handled differently on vercel, but good for local)
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Default to Vercel/production or local for dev
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Dùng '/api' khi deploy thực tế (Vercel rewrite), và localhost:5001 khi chạy local dev
+const baseURL = import.meta.env.PROD ? '/api' : 'http://localhost:5001/api';
 
 const api = axios.create({
   baseURL
