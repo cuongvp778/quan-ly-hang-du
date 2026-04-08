@@ -5,8 +5,6 @@ import { Html5QrcodeScanner, Html5Qrcode } from 'html5-qrcode';
 import api from '../api';
 
 const SIZES = ['3','3.5','4','4.5','5','5.5','6','6.5','7','7.5','8','8.5','9','9.5','10','10.5','11','11.5','12','13','14','15','16','17','18'];
-const VAI_OPTIONS = ['Knitted', 'Mesh', 'Synthetic', 'Leather', 'Other'];
-const PU_OPTIONS = ['PU1', 'PU2', 'PU3', 'TPU', 'Other'];
 
 const Toast = ({ message, type, onClose }) => {
   useEffect(() => {
@@ -256,18 +254,12 @@ const LPS = () => {
 
             <div style={{ display: 'flex', gap: '12px' }}>
               <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">Vải</label>
-                <select name="vai" value={formData.vai} onChange={handleChange} className="form-select">
-                  <option value="">Chọn Vải</option>
-                  {VAI_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
+                <label className="form-label" style={{ fontSize: '0.8.5rem' }}>Vải</label>
+                <input type="text" name="vai" value={formData.vai} onChange={handleChange} className="form-input" placeholder="Mã Vải..." style={{ fontSize: '0.85rem' }} />
               </div>
               <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">PU</label>
-                <select name="pu" value={formData.pu} onChange={handleChange} className="form-select">
-                  <option value="">Chọn PU</option>
-                  {PU_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
+                <label className="form-label" style={{ fontSize: '0.8.5rem' }}>PU</label>
+                <input type="text" name="pu" value={formData.pu} onChange={handleChange} className="form-input" placeholder="Mã PU..." style={{ fontSize: '0.85rem' }} />
               </div>
             </div>
 
