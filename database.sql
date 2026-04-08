@@ -1,6 +1,7 @@
 -- Run this in your Supabase SQL Editor
 
-CREATE TABLE lps_inventory (
+-- 1. Bảng lưu lịch sử nhập liệu (Đã tạo trước đó)
+CREATE TABLE IF NOT EXISTS lps_inventory (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   rpro TEXT NOT NULL,
   vai TEXT,
@@ -13,7 +14,16 @@ CREATE TABLE lps_inventory (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Bật tính năng Row Level Security (RLS) để bảo mật nếu cần
--- ALTER TABLE lps_inventory ENABLE ROW LEVEL SECURITY;
--- Do app nội bộ, có thể tắt tạm hoặc cho phép toàn quyền
--- CREATE POLICY "Cho phép tất cả" ON lps_inventory FOR ALL USING (true);
+-- 2. Bảng mới: Lưu danh mục từ Excel (Master Data)
+CREATE TABLE IF NOT EXISTS master_data (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  rpro TEXT NOT NULL,
+  vai TEXT,
+  pu TEXT,
+  bom TEXT,
+  so_luong_don INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 3. Tạo Index để tìm kiếm RPRO siêu tốc
+CREATE INDEX IF NOT EXISTS idx_master_data_rpro ON master_data (rpro);

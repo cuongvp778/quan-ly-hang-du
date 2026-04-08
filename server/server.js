@@ -114,7 +114,10 @@ apiRouter.get('/lps/search', async (req, res) => {
       .ilike('rpro', `%${searchString}%`)
       .limit(5);
 
-    if (masterError) throw masterError;
+    if (masterError) {
+      console.error('LỖI KHI TRUY VẤN MASTER_DATA:', masterError.message, masterError.details);
+      throw masterError;
+    }
 
     // 2. Nếu không có trong danh mục gốc, tìm trong lịch sử nhập (Dữ liệu đã nhập rồi) làm fallback
     if (!masterHits || masterHits.length === 0) {
