@@ -92,7 +92,10 @@ apiRouter.get('/lps', async (req, res) => {
     query = query.limit(100);
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      console.error('LỖI KHI TRUY VẤN LỊCH SỬ LPS:', error.message);
+      throw error;
+    }
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: error.message });
