@@ -111,10 +111,10 @@ apiRouter.get('/lps/search', async (req, res) => {
     const searchString = rpro.trim();
 
     // 1. Tìm trong bảng master_data (Dữ liệu danh mục gốc)
-    const { data: masterHits, error: masterError } = await supabase
+    const { data: rawMasterData, error: masterError } = await supabase
       .from('master_data')
-      .select('rpro, vai, pu, bom, so_luong_don')
-      .ilike('rpro', `%${searchString}%`)
+      .select('"RPRO 365", Cloth, PU, "BOM SKU 365", "PO Q\'TY"')
+      .ilike('RPRO 365', `%${searchString}%`)
       .limit(5);
 
     if (masterError) {
@@ -122,8 +122,17 @@ apiRouter.get('/lps/search', async (req, res) => {
       throw masterError;
     }
 
+    // Map dữ liệu về format cũ để Frontend dùng được
+    const masterHits = (rawMasterData || []).map(item => ({
+      rpro: item['RPRO 365'],
+      vai: item['Cloth'],
+      pu: item['PU'],
+      bom: item['BOM SKU 365'],
+      so_luong_don: item['PO Q\'TY']
+    }));
+
     // 2. Nếu không có trong danh mục gốc, tìm trong lịch sử nhập (Dữ liệu đã nhập rồi) làm fallback
-    if (!masterHits || masterHits.length === 0) {
+    if (masterHits.length === 0) {
       const { data: historyHits, error: historyError } = await supabase
         .from('lps_inventory')
         .select('rpro, vai, pu, bom, so_luong_don')
